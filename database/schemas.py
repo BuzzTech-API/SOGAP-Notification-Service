@@ -235,3 +235,21 @@ class WebSocketUser(BaseModel):
 
     class Config:
         arbitrary_types_allowed=True
+
+
+class NotificationBase(BaseModel):
+    typeOfEvent: str
+    title: str
+    mensage: str
+    addressed: int
+    sender: int
+    is_visualized: bool
+
+class NotificationCreate(NotificationBase):
+    pass
+
+class Notification(NotificationBase):
+    id: int
+
+    class Config:
+        from_attributes = True
