@@ -42,7 +42,7 @@ def get_not_visualized_notification(db: Session, user_id: int) -> schemas.Notifi
     )
 
 
-def create_notification(db: Session, notification: schemas.NotificationCreate):
+def create_notification(db: Session, notification: schemas.NotificationCreate) -> schemas.Notification:
     """Cria um novo pedido de evidencia no banco"""
     db_notification = Notification(
         typeOfEvent=notification.typeOfEvent,

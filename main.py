@@ -15,7 +15,9 @@ from sqlalchemy.orm import Session
 from models import notification_crud, JWTtoken
 from database.database import get_db
 from typing import Annotated, Optional
+from models.ConnectionManager import ConnectionManager
 import json
+from models import event_handle
 app = FastAPI()
 
 
@@ -35,24 +37,6 @@ app.add_middleware(
 ## Evidencias rotas
 
 
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[schemas.WebSocketUser] = []
-
-    async def connect(self, websocket: schemas.WebSocketUser):
-        await websocket.websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: schemas.WebSocketUser):
-        self.active_connections.remove(websocket)
-
-    async def send_personal_message(self, message, websocket: schemas.WebSocketUser):
-        await websocket.websocket.send_json(message)
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.websocket.send_text(message)
 
 
 manager = ConnectionManager()
@@ -87,8 +71,6 @@ async def websocket_endpoint(
         try:
             while True:
                 data = await websocketUser.websocket.receive_json()
-                await manager.send_personal_message(f"You wrote: {data}", websocketUser)
-                await manager.broadcast(f"Client says: {data}")
+                await event_handle.handle_mensage(connectionManager=manager, db=db, data=data)
         except WebSocketDisconnect:
             manager.disconnect(websocketUser)
-            await manager.broadcast(f"Client #{websocketUser.websocket.client} left the chat")
