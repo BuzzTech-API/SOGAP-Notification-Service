@@ -10,7 +10,7 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from database import schemas
+from database.schemas import User, WebSocketUser
 from sqlalchemy.orm import Session
 from models import notification_crud, JWTtoken
 from database.database import get_db
@@ -23,7 +23,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Ou especifique origens específicas
+    allow_origins=["localhost/"],  # Ou especifique origens específicas
+    allow_credentials=["*"],
     allow_methods=["*"],  # Ou especifique métodos específicos (GET, POST, etc.)
     allow_headers=["*"],  # Ou especifique cabeçalhos específicos
 )
@@ -41,20 +42,26 @@ app.add_middleware(
 
 manager = ConnectionManager()
 
+async def get_cookie_or_token(
+    websocket: WebSocket,
+    session: Annotated[str | None, Cookie(..., alias='access_token')] = None,
+    db: Session = Depends(get_db)
+):
+    credential = HTTPException(
+                status_code = status.WS_1008_POLICY_VIOLATION,
+                detail="Token Invalid",
+            )
+    if session is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    return JWTtoken.verify_token(token=(session), db=db, credentials_exception=credential)
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(
-    websocket: WebSocket, db: Session = Depends(get_db)
+    user: Annotated[User, Depends(get_cookie_or_token)], websocket: WebSocket, db: Session = Depends(get_db)
 ):
-    credential = HTTPException(
-                status_code = status.HTTP_403_FORBIDDEN,
-                detail="Token Invalid",
-            )
-    user = JWTtoken.verify_token(token=websocket.cookies.get('access_token'), db=db, credentials_exception=credential)
     
-    websocketUser = schemas.WebSocketUser(user=user, websocket=websocket)
-    
+    websocketUser = WebSocketUser(user=user, websocket=websocket)
     if user:
         await manager.connect(websocketUser)
         for item in notification_crud.get_not_visualized_notification(db=db, user_id=user.id):
@@ -66,7 +73,7 @@ async def websocket_endpoint(
                 'addressed':item.addressed,
                 'sender':item.sender,
                 'is_visualized':item.is_visualized,
-            }            
+            }
             await manager.send_personal_message(notification_dict, websocketUser)
         try:
             while True:

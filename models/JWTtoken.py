@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from database.schemas import TokenData
 import os
 from dotenv import dotenv_values
+from sqlalchemy.orm import Session
 
 # Python Environment Variable setup required on System or .env file
 config_env = {
@@ -39,8 +40,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-class TokenData(BaseModel):
-    username: Optional[str] = None
 
 # Função para verificar o token JWT
 async def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="login"))):
@@ -54,7 +53,7 @@ async def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="l
 
 
 
-def verify_token(token: str, credentials_exception, db):
+def verify_token(token: str, credentials_exception, db: Session):
     """Verifica se aquele token é verdadeiro"""
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
