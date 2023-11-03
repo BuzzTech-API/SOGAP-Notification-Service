@@ -4,6 +4,22 @@ from typing import List, Optional
 from fastapi import WebSocket
 
 
+class ValidationBase(BaseModel):
+    evidence_id :int
+    reason :str
+    user_id :int
+    is_validated :bool
+
+class ValidationCreate(ValidationBase):
+    pass
+
+class Validation(ValidationBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 class VerificationCode(BaseModel):
     verification_code: str
 

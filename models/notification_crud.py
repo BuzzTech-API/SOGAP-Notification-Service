@@ -36,7 +36,7 @@ def get_not_visualized_notification(db: Session, user_id: int) -> schemas.Notifi
     return (
         db.query(Notification)
         .filter(
-            Notification.is_visualized == False and Notification.addressed == user_id
+            Notification.is_visualized == False).where(Notification.addressed == user_id
         )
         .all()
     )

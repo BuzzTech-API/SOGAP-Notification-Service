@@ -4,6 +4,7 @@ from database import schemas
 from models.process_crud import Process, Step
 from models.request_for_evidence_crud import RequestForEvidence
 from models import notification_crud
+from models import validation_crud
 
 
 async def handle_mensage(connectionManager: ConnectionManager, db: Session, data):
@@ -32,7 +33,16 @@ async def handle_mensage(connectionManager: ConnectionManager, db: Session, data
         create_notification = notification_crud.create_notification(
             db=db, notification=schemas.NotificationCreate(**newNotificationData)
         )
-        print(create_notification)
+        validation_dict = {
+            "id": 0,
+            "evidence_id": data['data']['evidence_id'],
+            "reason": data['data']['reason'],
+            "user_id": data['data']['sender'],
+            "is_validated": False
+        }
+        create_validation_item = validation_crud.create_validation(db=db, validation=schemas.ValidationCreate(**validation_dict))
+        validation_dict['id']=create_validation_item.id
+        
         notification_dict = {
                 'id': create_notification.id,
                 'typeOfEvent':create_notification.typeOfEvent,
@@ -42,6 +52,11 @@ async def handle_mensage(connectionManager: ConnectionManager, db: Session, data
                 'sender':create_notification.sender,
                 'is_visualized':create_notification.is_visualized,
             }   
+
+        mensagem = {
+            "notification": notification_dict,
+            "validation": validation_dict
+        }    
         await connectionManager.send_invalited_mensage(
-            message=notification_dict, user_id=requestForEvidence.user_id
+            message=mensagem, user_id=requestForEvidence.user_id
         )

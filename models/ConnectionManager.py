@@ -8,8 +8,8 @@ class ConnectionManager:
         await websocket.websocket.accept()
         self.active_connections.append(websocket)
 
-    def disconnect(self, websocket: schemas.WebSocketUser):
-        websocket.websocket.close()
+    async def disconnect(self, websocket: schemas.WebSocketUser):
+        await websocket.websocket.close()
         self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message, websocket: schemas.WebSocketUser):
