@@ -21,6 +21,7 @@ class User(Base):
     name = Column(String(60))
     email = Column(String(64), unique=True, index=True)
     password = Column(String(64))
+    photo_link = Column(String(150))
     is_2fa_enable = Column(Boolean, default=False) # Chave booleana para sabe se a autenticação em 2 fatores está habilitada
     secret_key_2fa = Column(String, nullable=True) # Chave secreta gerada para o usuário
     role = Column(String(60))

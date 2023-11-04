@@ -4,6 +4,8 @@ from typing import List, Optional
 from fastapi import WebSocket
 
 
+
+
 class ValidationBase(BaseModel):
     evidence_id :int
     reason :str
@@ -146,6 +148,7 @@ class DeleteRequest(BaseModel):
 class UserBase(BaseModel):
     name: str
     email: str
+    photo_link: str
     role: str
     team: str
     is_active: bool
@@ -245,12 +248,6 @@ class TokenData(BaseModel):
     class Config:
         from_attributes = True
 
-class WebSocketUser(BaseModel):
-    websocket: WebSocket
-    user: User
-
-    class Config:
-        arbitrary_types_allowed=True
 
 
 class NotificationBase(BaseModel):

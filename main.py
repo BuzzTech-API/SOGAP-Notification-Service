@@ -10,14 +10,16 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from database.schemas import User, WebSocketUser
+from database import schemas
 from sqlalchemy.orm import Session
-from models import notification_crud, JWTtoken
+from models import notification_crud, JWTtoken, user_crud
 from database.database import get_db
 from typing import Annotated, Optional
 from models.ConnectionManager import ConnectionManager
 import json
 from models import event_handle
+
+
 app = FastAPI()
 
 
@@ -42,26 +44,18 @@ app.add_middleware(
 
 manager = ConnectionManager()
 
-async def get_cookie_or_token(
-    websocket: WebSocket,
-    session: Annotated[str | None, Cookie(..., alias='access_token')] = None,
-    db: Session = Depends(get_db)
-):
-    credential = HTTPException(
-                status_code = status.WS_1008_POLICY_VIOLATION,
-                detail="Token Invalid",
-            )
-    if session is None:
-        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-    return JWTtoken.verify_token(token=(session), db=db, credentials_exception=credential)
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(
-    user: Annotated[User, Depends(get_cookie_or_token)], websocket: WebSocket, db: Session = Depends(get_db)
+    websocket: WebSocket, db: Session = Depends(get_db)
 ):
-    
-    websocketUser = WebSocketUser(user=user, websocket=websocket)
+    await websocket.accept()
+    myId = websocket.cookies.get('myId')
+    user = user_crud.get_user(id=myId, db=db)    
+    websocketUser = {
+        "websocket": websocket,
+        "user":user
+    }
     if user:
         await manager.connect(websocketUser)
         for item in notification_crud.get_not_visualized_notification(db=db, user_id=user.id):
@@ -77,7 +71,7 @@ async def websocket_endpoint(
             await manager.send_personal_message(notification_dict, websocketUser)
         try:
             while True:
-                data = await websocketUser.websocket.receive_json()
+                data = await websocketUser['websocket'].receive_json()
                 await event_handle.handle_mensage(connectionManager=manager, db=db, data=data)
         except WebSocketDisconnect:
-            manager.disconnect(websocketUser)
+            await manager.disconnect(websocketUser)

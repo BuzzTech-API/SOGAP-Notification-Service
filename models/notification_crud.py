@@ -34,10 +34,8 @@ def get_all_notification(db: Session, skip: int = 0, limit: int = 100):
 def get_not_visualized_notification(db: Session, user_id: int) -> schemas.Notification:
     """Busca no banco todos os pedidos de evidencia, porém limitando a busca a 100 por vez"""
     return (
-        db.query(Notification)
-        .filter(
-            Notification.is_visualized == False).where(Notification.addressed == user_id
-        )
+        db.query(Notification).where(Notification.addressed == user_id).where(Notification.is_visualized == False
+        ).order_by(Notification.id)
         .all()
     )
 
