@@ -55,19 +55,17 @@ async def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="l
 
 def verify_token(token: str, credentials_exception, db: Session):
     """Verifica se aquele token é verdadeiro"""
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get('sub')
-        if email is None:
-            raise credentials_exception
-        if datetime.fromtimestamp(payload.get('exp')) < datetime.now():
-            raise HTTPException(
-                status_code = status.HTTP_403_FORBIDDEN,
-                detail="Token expired",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except JWTError:
+    
+    payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+    email = payload.get('sub')
+    if email is None:
         raise credentials_exception
+    if datetime.fromtimestamp(payload.get('exp')) < datetime.now():
+        raise HTTPException(
+            status_code = status.HTTP_403_FORBIDDEN,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     user = user_crud.get_user_by_email(db=db, email=email)
     if user is None:
         raise credentials_exception

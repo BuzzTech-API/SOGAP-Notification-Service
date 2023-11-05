@@ -39,6 +39,16 @@ app.add_middleware(
 
 ## Evidencias rotas
 
+async def get_cookie_or_token(
+    websocket: WebSocket,
+    session: Annotated[str | None, Cookie(..., alias='access_token')] = None,
+    db: Session = Depends(get_db),
+):
+    if session is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    verify_token = JWTtoken.verify_token(token=session, credentials_exception=WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason='token invalid'), db=db)
+    
+    return verify_token
 
 
 
@@ -47,11 +57,14 @@ manager = ConnectionManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(
-    websocket: WebSocket, db: Session = Depends(get_db)
+
+    websocket: WebSocket,
+    user: Annotated[schemas.User, Depends(get_cookie_or_token)],
+    db: Session = Depends(get_db)
 ):
     await websocket.accept()
     myId = websocket.cookies.get('myId')
-    user = user_crud.get_user(id=myId, db=db)    
+    access_token = websocket.cookies.get('access_token')
     websocketUser = {
         "websocket": websocket,
         "user":user
@@ -68,7 +81,10 @@ async def websocket_endpoint(
                 'sender':item.sender,
                 'is_visualized':item.is_visualized,
             }
-            await manager.send_personal_message(notification_dict, websocketUser)
+            send_dict={
+                'notification': notification_dict
+            }
+            await manager.send_personal_message(send_dict, websocketUser)
         try:
             while True:
                 data = await websocketUser['websocket'].receive_json()
