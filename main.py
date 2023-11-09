@@ -42,11 +42,12 @@ app.add_middleware(
 async def get_cookie_or_token(
     websocket: WebSocket,
     session: Annotated[str | None, Cookie(..., alias='access_token')] = None,
+    access_token: Annotated[str | None, Query()] = None,
     db: Session = Depends(get_db),
 ):
     if session is None:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-    verify_token = JWTtoken.verify_token(token=session, credentials_exception=WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason='token invalid'), db=db)
+    verify_token = JWTtoken.verify_token(token=access_token or session, credentials_exception=WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason='token invalid'), db=db)
     
     return verify_token
 
@@ -54,6 +55,12 @@ async def get_cookie_or_token(
 
 manager = ConnectionManager()
 
+@app.delete("/notification/{id}")
+async def is_visualized_notification(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    return notification_crud.delete_notification(db=db, id=id)
 
 @app.websocket("/ws")
 async def websocket_endpoint(

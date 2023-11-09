@@ -80,8 +80,9 @@ def delete_notification(db: Session, id: int):
     db_notification = db.query(Notification).filter(Notification.id == id).first()
 
     if db_notification:
-        db.delete(db_notification)
+        db_notification.is_visualized = True
         db.commit()
+        db.refresh(db_notification)
 
     return db_notification
 
