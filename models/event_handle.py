@@ -1,3 +1,6 @@
+from models.user_crud import get_user
+from models import send_mail
+from fastapi_mail import FastMail, MessageSchema, MessageType
 from models.ConnectionManager import ConnectionManager
 from sqlalchemy.orm import Session
 from database import schemas
@@ -30,6 +33,8 @@ async def handle_mensage(connectionManager: ConnectionManager, db: Session, data
             "sender": data['data']['sender'],
             "is_visualized": False,
         }
+
+
         create_notification = notification_crud.create_notification(
             db=db, notification=schemas.NotificationCreate(**newNotificationData)
         )
@@ -56,7 +61,27 @@ async def handle_mensage(connectionManager: ConnectionManager, db: Session, data
         mensagem = {
             "notification": notification_dict,
             "validation": validation_dict
-        }    
+        }
+        id = requestForEvidence.user_id
+        user = get_user(db=db, id=id)
+
+        html = f"""
+        <h5>Evidência Invalidada</h5>
+        <br>
+        <h4>Nome da evidência: {requestForEvidence.requiredDocument}</h5>
+        <h4>Razão: {create_validation_item.reason}
+        """ 
+
+        message = MessageSchema(
+            subject="Evidência Invalidada",  # título do email
+            recipients=[user.email],  # email
+            body=html,  # mensagem principal
+            subtype=MessageType.html
+        )
+
+        fm = FastMail(send_mail.conf)  # função que envia os emails
+        await fm.send_message(message)
+
         await connectionManager.send_invalited_mensage(
             message=mensagem, user_id=requestForEvidence.user_id
         )
